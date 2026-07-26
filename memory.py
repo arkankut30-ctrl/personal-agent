@@ -39,6 +39,7 @@ class Memory:
         self.data.setdefault("facts", [])
         self.data.setdefault("settings", {})
         self.data.setdefault("sessions", {})
+        self.data.setdefault("knowledge", [])
 
         # توافق مع النسخة القديمة (history مباشرة بدون sessions)
         old_history = self.data.pop("history", None)
@@ -159,6 +160,38 @@ class Memory:
         self.data.setdefault("settings", {})[key] = value
         self.save()
 
+    # ---------- ذاكرة المعرفة (نتائج بحث سابقة، تُستخدم للتعلّم والتسريع) ----------
+    def add_knowledge(self, query: str, summary: str):
+        """يخزن نتيجة بحث عشان يستخدمها لاحقًا بدل ما يعيد البحث من الصفر —
+        هذا هو 'التعلّم' الفعلي والقابل للقياس: كل بحث جديد يصير معرفة دائمة."""
+        self.data.setdefault("knowledge", [])
+        self.data["knowledge"].append({
+            "query": query.strip().lower(),
+            "summary": summary,
+            "time": datetime.now().isoformat(),
+        })
+        if len(self.data["knowledge"]) > 300:
+            self.data["knowledge"] = self.data["knowledge"][-300:]
+        self.save()
+
+    def find_cached_knowledge(self, query: str, max_age_hours: float = 6):
+        """يرجع نتيجة محفوظة سابقًا لنفس السؤال تقريبًا لو كانت حديثة، بدل
+        إعادة البحث بالإنترنت من جديد (أسرع بكثير + يقلل الحمل)."""
+        q = query.strip().lower()
+        now = datetime.now()
+        for item in reversed(self.data.get("knowledge", [])):
+            if item["query"] == q:
+                try:
+                    age_hours = (now - datetime.fromisoformat(item["time"])).total_seconds() / 3600
+                except ValueError:
+                    continue
+                if age_hours <= max_age_hours:
+                    return item["summary"]
+        return None
+
+    def knowledge_count(self) -> int:
+        return len(self.data.get("knowledge", []))
+
     def clear(self):
-        self.data = {"facts": [], "settings": {}, "sessions": {}}
+        self.data = {"facts": [], "settings": {}, "sessions": {}, "knowledge": []}
         self.new_session()

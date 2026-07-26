@@ -265,6 +265,14 @@
     </div>
 
     <div class="setting-row">
+      <label>الأداء والتعلّم</label>
+      <div class="update-box">
+        <div class="version-row"><span>أنوية معالج مستخدمة</span><span id="cpu-threads">—</span></div>
+        <div class="version-row"><span>معلومات متعلّمة من الإنترنت</span><span id="knowledge-count">—</span></div>
+      </div>
+    </div>
+
+    <div class="setting-row">
       <label>التحديثات</label>
       <div class="update-box">
         <div class="version-row"><span>النسخة الحالية</span><span id="local-version">—</span></div>
@@ -306,6 +314,8 @@ const checkUpdateBtn = document.getElementById('check-update-btn');
 const applyUpdateBtn = document.getElementById('apply-update-btn');
 const updateMessageEl = document.getElementById('update-message');
 const localVersionEl = document.getElementById('local-version');
+const cpuThreadsEl = document.getElementById('cpu-threads');
+const knowledgeCountEl = document.getElementById('knowledge-count');
 
 function scrollDown() { messagesEl.scrollTop = messagesEl.scrollHeight; }
 
@@ -452,6 +462,8 @@ async function openSettings() {
   confirmShellToggle.checked = settingsData.confirm_shell;
   themeToggle.checked = settingsData.theme === 'light';
   modelTag.textContent = settingsData.model;
+  cpuThreadsEl.textContent = settingsData.cpu_threads;
+  knowledgeCountEl.textContent = settingsData.knowledge_count;
 
   factsListEl.innerHTML = '';
   if (!factsData.facts.length) {

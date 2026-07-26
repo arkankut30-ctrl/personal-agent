@@ -12,6 +12,8 @@ app.py
     ثم افتح المتصفح على: http://localhost:5000
 """
 
+import os
+
 import requests
 from flask import Flask, request, jsonify, render_template
 
@@ -23,6 +25,13 @@ OLLAMA_CHAT_URL = "http://localhost:11434/api/chat"
 OLLAMA_TAGS_URL = "http://localhost:11434/api/tags"
 DEFAULT_MODEL = "qwen2.5:3b"
 
+# إعدادات أداء: نستخدم كل أنوية المعالج المتاحة، ونبقي النموذج محمّلاً
+# بالذاكرة لمدة نصف ساعة بعد كل رسالة (يلغي تأخير "إعادة التحميل" في كل مرة)
+CPU_THREADS = os.cpu_count() or 4
+KEEP_ALIVE = "30m"
+CONTEXT_WINDOW = 4096   # نافذة سياق أصغر = توليد أسرع على المعالج فقط
+TEMPERATURE = 0.3       # قيمة منخفضة = إجابات أكثر اتزانًا ودقة، أقل "اختراع"
+
 SYSTEM_PROMPT_TEMPLATE = """أنت وكيل شخصي ذكي ومستقل يعمل محليًا بالكامل على جهاز المستخدم،
 ويتم التواصل معك عبر واجهة ويب احترافية بالمتصفح.
 
@@ -30,9 +39,11 @@ SYSTEM_PROMPT_TEMPLATE = """أنت وكيل شخصي ذكي ومستقل يعم�
 {facts}
 
 تعليمات:
+- الدقة أهم من السرعة: لو كان السؤال عن معلومة حديثة، سعر، تاريخ، حدث،
+  أو أي شيء ممكن يكون تغيّر، استخدم أداة web_search للتأكد بدل التخمين.
+  إجابة خاطئة بثقة أسوأ من إجابة متأخرة شوي لكن صحيحة.
 - إذا لاحظت معلومة جديدة ومهمة عن المستخدم، استخدم أداة remember_fact لحفظها.
 - استخدم run_python_code أو run_shell_command عند الحاجة لتنفيذ مهام فعلية.
-- استخدم أداة web_search لأي سؤال عن معلومات حديثة أو أخبار أو أسعار.
 - كن مباشرًا ومختصرًا، وتحدث بنفس لغة المستخدم.
 """
 
@@ -77,7 +88,18 @@ def build_system_prompt() -> str:
 def call_ollama(messages):
     response = requests.post(
         OLLAMA_CHAT_URL,
-        json={"model": current_model(), "messages": messages, "tools": OLLAMA_TOOLS, "stream": False},
+        json={
+            "model": current_model(),
+            "messages": messages,
+            "tools": OLLAMA_TOOLS,
+            "stream": False,
+            "keep_alive": KEEP_ALIVE,
+            "options": {
+                "num_thread": CPU_THREADS,
+                "num_ctx": CONTEXT_WINDOW,
+                "temperature": TEMPERATURE,
+            },
+        },
         timeout=180,
     )
     response.raise_for_status()
@@ -227,6 +249,8 @@ def get_settings():
         "model": current_model(),
         "confirm_shell": confirm_shell_enabled(),
         "theme": memory.get_setting("theme", "dark"),
+        "knowledge_count": memory.knowledge_count(),
+        "cpu_threads": CPU_THREADS,
     })
 
 

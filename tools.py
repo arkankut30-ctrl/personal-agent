@@ -128,6 +128,12 @@ def run_tool(name: str, tool_input: dict, memory=None, confirm_shell: bool = Tru
         if not query:
             return "تعذر البحث: لم يتم تحديد نص للبحث."
 
+        # تحقق أول من ذاكرة المعرفة المتراكمة (أسرع بكثير من إعادة البحث)
+        if memory is not None:
+            cached = memory.find_cached_knowledge(query)
+            if cached:
+                return "(من الذاكرة المحفوظة مسبقًا، بحث سابق حديث)\n" + cached
+
         try:
             from ddgs import DDGS  # الاسم الجديد للمكتبة
         except ImportError:
@@ -149,7 +155,14 @@ def run_tool(name: str, tool_input: dict, memory=None, confirm_shell: bool = Tru
 
             if not results:
                 return "لم يتم العثور على أي نتائج لهذا البحث."
-            return "\n\n".join(results)
+
+            summary = "\n\n".join(results)
+
+            # احفظ النتيجة بذاكرة المعرفة عشان يستفيد منها لاحقًا (تعلّم متراكم)
+            if memory is not None:
+                memory.add_knowledge(query, summary)
+
+            return summary
         except Exception as e:
             return f"خطأ أثناء البحث في الإنترنت: {e}"
 
