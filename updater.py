@@ -19,7 +19,7 @@ import subprocess
 
 import requests
 
-GITHUB_REPO = ""  # مثال: "arkan-kali/personal-agent" - عبّيه بعد إنشاء الريبو
+GITHUB_REPO = "arkankut30-ctrl/personal-agent"
 GITHUB_BRANCH = "main"
 
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
